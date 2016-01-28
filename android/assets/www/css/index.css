@@ -1,0 +1,140 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+* {
+    -webkit-tap-highlight-color: rgba(0,0,0,0); /* make transparent link selection, adjust last value opacity 0 to 1.0 */
+}
+
+body {
+    -webkit-touch-callout: none;                /* prevent callout to copy image, etc when tap to hold */
+    -webkit-text-size-adjust: none;             /* prevent webkit from resizing text to fit */
+    -webkit-user-select: none;                  /* prevent copy paste, to allow, change 'none' to 'text' */
+    background-color:#002aff;
+    font-family:'HelveticaNeue-Light', 'HelveticaNeue', Helvetica, Arial, sans-serif;
+    font-size:12px;
+    height:100%;
+    margin:0px;
+    padding:0px;
+    text-transform:uppercase;
+    width:100%;
+}
+
+/* Portrait layout (default) */
+.app {
+    height:300px;                   /* text area height */
+    width:80%;                   /* text area width */
+    text-align:center;
+    padding:80px 0px 0px 0px;     /* image height is 200px (bottom 20px are overlapped with text) */
+    margin:50px 35px 0px 35px;  /* offset vertical: half of image height and text area height */
+                                   /* offset horizontal: half of text area width */
+}
+
+/* Landscape layout (with min-width) */
+@media screen and (min-aspect-ratio: 1/1) and (min-width:400px) {
+    .app {
+        padding:75px 0px 75px 0px;  /* padding-top + padding-bottom + text area = image height */
+        margin:50px 0px 0px 0px;  /* offset vertical: half of image height */
+                                      /* offset horizontal: half of image width and text area width */
+    }
+}
+.title {
+    border-radius: 10px;
+    border-color:bisque;
+    border-style: solid;
+    margin-bottom: 30px;
+    height: 40px;
+    background-color: azure;
+}
+.title label{
+    margin-top: 15px;
+    font-size: 30px;
+    font-weight: bolder;
+}
+.interval {
+    height: 30px;
+    border-radius: 10px;
+    border-style: solid;
+    border-color: bisque;
+    margin-bottom: 30px;
+    background-color: azure;
+}
+.interval label {
+    font-size:  20px; 
+    color: #002aff;
+}
+.interval input {
+    width:40px;
+    margin-left: 20px;
+    font-size: 20px;
+    text-align: center;
+}
+.server {
+        height: 30px;
+        border-radius: 10px;
+        border-style: solid;
+        border-color: bisque;
+        margin-bottom: 30px;
+        background-color: azure;
+}
+.server label {
+    font-size:  20px;
+    color: #002aff;
+}
+.server input {
+    width:150px;
+    margin-left: 20px;
+    font-size: 14px;
+    text-align: left;
+}
+.event {
+    height: 40px;
+    border-color: bisque;
+    border-radius: 20px;
+    
+}
+.event input {
+    margin:20px;
+    font-size: 25px;
+    border-radius: 5px;
+    width:70px;
+    height: auto;
+
+}
+.status {
+    border-radius:4px;
+    -webkit-border-radius:4px;
+    color:#FFFFFF;
+    font-size:12px;
+    margin:0px 30px;
+    padding:2px 0px;
+}
+
+.status.listening {
+    background-color:#333333;
+    display:block;
+}
+
+.status.received {
+    background-color:#4B946A;
+    display:none;
+}
+.blink {
+    animation:fade 3000ms infinite;
+    -webkit-animation:fade 3000ms infinite;
+}
+
