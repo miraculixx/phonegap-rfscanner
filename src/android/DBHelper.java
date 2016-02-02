@@ -53,19 +53,12 @@ public class DBHelper extends SQLiteOpenHelper {
 
         Cursor cursor = db.rawQuery("select * from SCAN_LIST", null);
         while(cursor.moveToNext()) {
-//            str += cursor.getInt(0)
-//                    + " : Device SSID = "
-//                    + cursor.getString(1)
-//                    + ", Signal = "
-//                    + cursor.getInt(2)
-//                    + "\n";
-
 
             if(v == 1) {// networks:
                 JSONObject subObject = new JSONObject();
                 try {
-                    subObject.put("SSID", cursor.getString(1));
-                    subObject.put("SIGNAL", cursor.getInt(2));
+                    subObject.put("ssid", cursor.getString(1));
+                    subObject.put("signal", cursor.getInt(2));
                     jArray.put(subObject);
 
                 } catch (JSONException e) {
@@ -78,8 +71,8 @@ public class DBHelper extends SQLiteOpenHelper {
 
                 JSONObject subObject = new JSONObject();
                 try {
-                    subObject.put("MAC", cursor.getString(1));
-                    subObject.put("SIGNAL", cursor.getInt(2));
+                    subObject.put("mac", cursor.getString(1));
+                    subObject.put("signal", cursor.getInt(2));
                     jArray.put(subObject);
 
                 } catch (JSONException e) {

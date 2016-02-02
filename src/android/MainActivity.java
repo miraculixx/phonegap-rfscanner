@@ -45,8 +45,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -98,18 +101,17 @@ public class MainActivity extends CordovaActivity implements LocationListener
         Location location = locationManager.getLastKnownLocation(provider);
 
 
-        if(location == null){
+        if(location == null)
             Toast.makeText(this, "There are no available position information providers.", Toast.LENGTH_SHORT).show();
-            //onLocationChanged(location);
-        }else{
+        else
             //GPS start from last location.
             onLocationChanged(location);
-        }
+
 
         // Set by <content src="index.html" /> in config.xml
         loadUrl(launchUrl);
     }
-    public void PostJSONData(String url){
+    public void postJSONData(String url){
 
         JSONObject jObject;
         JSONArray jArray_wifi, jArray_bte;
@@ -122,7 +124,7 @@ public class MainActivity extends CordovaActivity implements LocationListener
 
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
-        String date=sdf.format (new Date());
+        String date=sdf.format(new Date());
 
         jObject = new JSONObject();
         JSONObject subObject = new JSONObject();
@@ -141,23 +143,59 @@ public class MainActivity extends CordovaActivity implements LocationListener
             jObject.put("comment", "rfscanner");
             jObject.put("poll", "/api/v1/polls/poll/rfscan");
 
-
-            Log.w("tag", "Posting...");
-            postData(url, jObject);
-            //postData("https://cpdev.dockrzone.com/api/v1/polls/vote/", jObject);
-            Log.w("tag", "Posting end....");
-
-            Log.w("tag", "DB deleting...");
-            w_dbManager.delete("delete from SCAN_LIST where 1");
-            b_dbManager.delete("delete from SCAN_LIST where 1");
+            if(excutePost(url, jObject.toString())) {
+                w_dbManager.delete("delete from SCAN_LIST where 1");
+                b_dbManager.delete("delete from SCAN_LIST where 1");
+            }
 
         } catch (JSONException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-
-
     }
+    public static boolean excutePost(String targetURL, String urlParameters)
+    {
+        URL url;
+        HttpURLConnection connection = null;
+        try {
+            //Create connection
+            url = new URL(targetURL);
+            connection = (HttpURLConnection)url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("charset", "utf-8");
+
+
+            connection.setRequestProperty("Content-Length", "" +
+                    Integer.toString(urlParameters.getBytes().length));
+            connection.setRequestProperty("Content-Language", "en-US");
+
+            connection.setUseCaches (false);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+
+            //Send request
+            DataOutputStream wr = new DataOutputStream (
+                    connection.getOutputStream ());
+            wr.writeBytes (urlParameters);
+            wr.flush ();
+            wr.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+
+        } finally {
+
+            if(connection != null) {
+                connection.disconnect();
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public void onLocationChanged(Location location) {
 
@@ -183,33 +221,5 @@ public class MainActivity extends CordovaActivity implements LocationListener
     public void onProviderDisabled(String s) {
     }
 
-    public void postData(String url,JSONObject obj) {
-        // Create a new HttpClient and Post Header
 
-        HttpParams myParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(myParams, 10000);
-        HttpConnectionParams.setSoTimeout(myParams, 10000);
-        HttpClient httpclient = new DefaultHttpClient(myParams );
-        String json=obj.toString();
-
-        try {
-
-            HttpPost httppost = new HttpPost(url.toString());
-            httppost.setHeader("Content-type", "application/json");
-
-            StringEntity se = new StringEntity(obj.toString());
-            se.setContentEncoding(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
-            httppost.setEntity(se);
-
-            HttpResponse response = httpclient.execute(httppost);
-            Log.e("tag", json);
-
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }

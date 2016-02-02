@@ -42,7 +42,7 @@ public class ScanDevice extends CordovaPlugin {
     }
 
     // Plugin namespace
-   // private static final String JS_NAMESPACE = "cordova.plugins.backgroundMode";
+    private static final String JS_NAMESPACE = "cordova.plugins.backgroundMode";
 
 
 
@@ -58,7 +58,9 @@ public class ScanDevice extends CordovaPlugin {
     private String serverurl;
     private Boolean stopped = true;
     private DBHelper dbManager;
-    private MainActivity MA;
+    private MainActivity mainActivity;
+    private final long m_TimerInterval = 14 * 60000;
+    private final long m_tm = 60000;
 
 
     Activity context;
@@ -119,7 +121,7 @@ public class ScanDevice extends CordovaPlugin {
             interval= args.getString(0);
             serverurl = args.getString(1);
             stopped = false;
-            MA = new MainActivity();
+            mainActivity = new MainActivity();
             startrun();
             return true;
         }
@@ -173,9 +175,9 @@ public class ScanDevice extends CordovaPlugin {
                     synchronized (this){
                         try {
                             startService();
-                            wait(2 * 60000);
-                            PostServer(serverurl);
-                            wait(30000);
+                            Thread.sleep(m_TimerInterval);
+                            postServer(serverurl);
+                            Thread.sleep(m_tm);
                         }catch (Exception e){}
                     }
                 }
@@ -192,8 +194,8 @@ public class ScanDevice extends CordovaPlugin {
         stopService();
     }
 
-    private void PostServer(String url){
-        MA.PostJSONData(url);
+    private void postServer(String url){
+        mainActivity.postJSONData(url);
     }
 
     /**
