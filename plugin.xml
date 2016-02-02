@@ -44,7 +44,6 @@
             target-dir="src/com/example/scandevice"/>
         <source-file src="src/android/MainActivity.java"
             target-dir="src/com/example/scandevice"/>
-		<source-file src="src/android/MyLocationListener.java"
-            target-dir="src/com/example/scandevice"/>
+		
     </platform>
 	</plugin>
