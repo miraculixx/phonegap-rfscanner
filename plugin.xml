@@ -47,3 +47,4 @@
 		<source-file src="src/android/MyLocationListener.java"
             target-dir="src/com/example/scandevice"/>
     </platform>
+	</plugin>
