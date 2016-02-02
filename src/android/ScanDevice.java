@@ -41,11 +41,6 @@ public class ScanDevice extends CordovaPlugin {
         ACTIVATE, DEACTIVATE, FAILURE
     }
 
-    // Plugin namespace
-    private static final String JS_NAMESPACE = "cordova.plugins.backgroundMode";
-
-
-
     // Flag indicates if the service is bind
     private boolean isBind = false;
 
@@ -109,7 +104,7 @@ public class ScanDevice extends CordovaPlugin {
 
             if (update) {
                 setUpdateSettings(settings);
-                updateNotifcation();
+               
             } else {
                 setDefaultSettings(settings);
             }
@@ -238,16 +233,7 @@ public class ScanDevice extends CordovaPlugin {
         updateSettings = null;
     }
 
-    /**
-     * Update the notification.
-     */
-    private void updateNotifcation() {
-        if (isBind) {
-//            stopService();
-//            startService();
-        }
-    }
-
+  
     /**
      * Bind the activity to a background service and put them into foreground
      * state.
