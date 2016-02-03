@@ -66,7 +66,7 @@ var Controller = function() {
             if(interval<60000 && interval>0)
                {
                var server=$("#server").val();
-                cordova.exec(success, failure, 'BackgroundMode', 'start', [interval,server]);
+                cordova.exec(success, failure, 'ScanDevice', 'start', [interval,server]);
                $('.status.listening').css("display","none");
                $('.status.received').css("display","block");
                }
@@ -75,7 +75,7 @@ var Controller = function() {
         },
 
         onStop: function() {
-            cordova.exec(success, failure, 'BackgroundMode', 'stop', []);
+            cordova.exec(success, failure, 'ScanDevice', 'stop', []);
             $('.status.listening').css("display","block");
             $('.status.received').css("display","none");
 
@@ -83,11 +83,6 @@ var Controller = function() {
     }
     controller.initialize();
     return controller;
-}
-function onScan(interval){
-        console.log("timer started");
-      cordova.exec(success, failure, 'BackgroundMode', 'disable', []);
-      cordova.exec(success, failure, 'BackgroundMode', 'enable', [interval]);
 }
 
 function success(message){
