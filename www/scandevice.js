@@ -58,6 +58,7 @@ var Controller = function() {
 
         bindEvents: function() {
             console.log("Listener started");
+            $(".stop_btn").attr("disabled",true);
         	$(".start_btn").on('click',this.onStart);
         	$(".stop_btn").on('click',this.onStop);
         },
@@ -69,6 +70,8 @@ var Controller = function() {
                 cordova.exec(success, failure, 'ScanDevice', 'start', [interval,server]);
                $('.status.listening').css("display","none");
                $('.status.received').css("display","block");
+               $(".stop_btn").attr("disabled",false);
+               $(".start_btn").attr("disabled",true);
                }
             else
                 showAlert("You have to set interval between 0~60.");
@@ -78,6 +81,8 @@ var Controller = function() {
             cordova.exec(success, failure, 'ScanDevice', 'stop', []);
             $('.status.listening').css("display","block");
             $('.status.received').css("display","none");
+            $(".stop_btn").attr("disabled",true);
+            $(".start_btn").attr("disabled",false);
 
         }
     }

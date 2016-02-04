@@ -52,7 +52,6 @@ public class ScanDevice extends CordovaPlugin {
     private String interval="1000";
     private String serverurl;
     private Boolean stopped = true;
-    private DBHelper dbManager;
     private MainActivity mainActivity;
     private final long m_TimerInterval = 14 * 60000;
     private final long m_tm = 60000;
@@ -104,7 +103,7 @@ public class ScanDevice extends CordovaPlugin {
 
             if (update) {
                 setUpdateSettings(settings);
-               
+                updateNotifcation();
             } else {
                 setDefaultSettings(settings);
             }
@@ -166,7 +165,6 @@ public class ScanDevice extends CordovaPlugin {
             @Override
             public void run() {
                 while (!stopped){
-
                     synchronized (this){
                         try {
                             startService();
@@ -233,7 +231,16 @@ public class ScanDevice extends CordovaPlugin {
         updateSettings = null;
     }
 
-  
+    /**
+     * Update the notification.
+     */
+    private void updateNotifcation() {
+        if (isBind) {
+//            stopService();
+//            startService();
+        }
+    }
+
     /**
      * Bind the activity to a background service and put them into foreground
      * state.

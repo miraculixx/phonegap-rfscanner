@@ -24,30 +24,16 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
 import org.apache.cordova.*;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.http.protocol.HTTP;
-import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -67,7 +53,6 @@ public class MainActivity extends CordovaActivity implements LocationListener
 
     String provider;
 
-
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -79,7 +64,6 @@ public class MainActivity extends CordovaActivity implements LocationListener
 
         // Getting the name of the provider that meets the criteria
         provider = locationManager.getBestProvider(criteria, true);
-
 
         if(provider == null && !locationManager.isProviderEnabled(provider)){
 
@@ -112,48 +96,10 @@ public class MainActivity extends CordovaActivity implements LocationListener
         loadUrl(launchUrl);
     }
     public void postJSONData(String url){
-
-        JSONObject jObject;
-        JSONArray jArray_wifi, jArray_bte;
-
-        w_dbManager = new DBHelper(context, "WiFi.db", null, 1);
-        jArray_wifi = w_dbManager.PrintData(wifiDB);
-
-        b_dbManager = new DBHelper(context, "BTE.db", null, 1);
-        jArray_bte = b_dbManager.PrintData(bteDB);
-
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
-        String date=sdf.format(new Date());
-
-        jObject = new JSONObject();
-        JSONObject subObject = new JSONObject();
-
-        try {
-            subObject.put("lat", lat);
-            subObject.put("lon", lon);
-            subObject.put("alt", alt);
-            subObject.put("timestamp", timestamp);
-
-            jObject.put("choice","scan");
-            jObject.put("timestamp", date);
-            jObject.put("devices", jArray_bte);
-            jObject.put("networks", jArray_wifi);
-            jObject.put("gps", subObject);
-            jObject.put("comment", "rfscanner");
-            jObject.put("poll", "/api/v1/polls/poll/rfscan");
-
-            if(excutePost(url, jObject.toString())) {
-                w_dbManager.delete("delete from SCAN_LIST where 1");
-                b_dbManager.delete("delete from SCAN_LIST where 1");
-            }
-
-        } catch (JSONException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        new HttpAsyncTask().execute(url);
     }
-    public static boolean excutePost(String targetURL, String urlParameters)
+
+    public static String excutePost(String targetURL, String urlParameters)
     {
         URL url;
         HttpURLConnection connection = null;
@@ -171,7 +117,7 @@ public class MainActivity extends CordovaActivity implements LocationListener
                     Integer.toString(urlParameters.getBytes().length));
             connection.setRequestProperty("Content-Language", "en-US");
 
-            connection.setUseCaches (false);
+            connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(true);
 
@@ -184,16 +130,15 @@ public class MainActivity extends CordovaActivity implements LocationListener
 
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
+            return "Don't post data";
 
         } finally {
 
             if(connection != null) {
                 connection.disconnect();
-                return false;
             }
         }
-        return true;
+        return "Data Sent";
     }
 
     @Override
@@ -221,5 +166,52 @@ public class MainActivity extends CordovaActivity implements LocationListener
     public void onProviderDisabled(String s) {
     }
 
+    private class HttpAsyncTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... urls) {
 
+            JSONObject jObject;
+            JSONArray jArray_wifi, jArray_bte;
+
+            w_dbManager = new DBHelper(context, "WiFi.db", null, 1);
+            jArray_wifi = w_dbManager.PrintData(wifiDB);
+
+            b_dbManager = new DBHelper(context, "BTE.db", null, 1);
+            jArray_bte = b_dbManager.PrintData(bteDB);
+
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+            String date = sdf.format(new Date());
+
+            jObject = new JSONObject();
+            JSONObject subObject = new JSONObject();
+
+            try {
+                subObject.put("lat", lat);
+                subObject.put("lon", lon);
+                subObject.put("alt", alt);
+                subObject.put("timestamp", timestamp);
+
+                jObject.put("choice", "scan");
+                jObject.put("timestamp", date);
+                jObject.put("devices", jArray_bte);
+                jObject.put("networks", jArray_wifi);
+                jObject.put("gps", subObject);
+                jObject.put("comment", "rfscanner");
+                jObject.put("poll", "/api/v1/polls/poll/rfscan");
+
+            } catch (JSONException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            return excutePost(urls[0], jObject.toString());
+        }
+        // onPostExecute displays the results of the AsyncTask.
+        @Override
+        protected void onPostExecute(String result) {
+            w_dbManager.delete("delete from SCAN_LIST where 1");
+            b_dbManager.delete("delete from SCAN_LIST where 1");
+            Toast.makeText(context, "Data Sent!", Toast.LENGTH_LONG).show();
+        }
+    }
 }
