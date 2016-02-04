@@ -10,8 +10,6 @@ import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.util.Log;
-
 import java.util.List;
 /**
  * Created by Slonic on 1/27/2016.
@@ -41,11 +39,11 @@ public class WifiScanService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         mTimeInterval = Integer.parseInt(intent.getStringExtra(TIME_STAMP));
         count = mMinute/Integer.parseInt(intent.getStringExtra(TIME_STAMP));
+        registerReceiver(new WifiReceiver(), new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
         handlerThread = new HandlerThread("StartScanWiFiThread");
         handlerThread.start();
         mHandler = new Handler(handlerThread.getLooper());
-        registerReceiver(new WifiReceiver(), new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION), null, mHandler);
         mHandler.post(mRunnable);
         return START_STICKY;
     }
@@ -69,7 +67,6 @@ public class WifiScanService extends Service {
                 if (mCount == count) {
                     stop(); return;
                 }
-
                 mainWifi.startScan();
                 mHandler.postDelayed(mRunnable, mTimeInterval);
                 mCount++;
@@ -81,7 +78,7 @@ public class WifiScanService extends Service {
 
     private void stop(){
         mCount = 0;
-        mHandler.removeCallbacksAndMessages(null);
+        mHandler.removeCallbacks(mRunnable);
         handlerThread.quit();
         handlerThread.interrupt();
         handlerThread = null;
