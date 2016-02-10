@@ -16,17 +16,41 @@
     //  [self returnLocationInfo:callbackId andKeepCallback:"OKay"];
     
     CDVPluginResult* pluginResult = nil;
-    NSString* echo = [command.arguments objectAtIndex:0];
+    coord = [command.arguments objectAtIndex:0];
     
-    [self InitData];
-
     
+    //[self InitData];
+    
+    if (![self.thread isExecuting]) {
+        NSLog(@"Starting thread...");
+        loopflag = TRUE;
+        [self.thread start];
+    }
 }
+
+-(NSThread*)thread{
+    if (!_thread) {
+        _thread = [[NSThread alloc]initWithTarget:self selector:@selector(longloop) object:nil];
+    }
+    return _thread;
+}
+-(void)longloop{
+    while (loopflag) {
+        [self performSelector:@selector(InitData) onThread:[NSThread mainThread] withObject:[NSNumber numberWithLong:3] waitUntilDone:YES];
+        sleep(75);
+    }
+}
+
 
 -(void)stop:(CDVInvokedUrlCommand *)command
 {
-    
-    
+    loopflag = FALSE;
+    if ([self.thread isExecuting]) {
+        NSLog(@"Stopping thread...");
+        [self.thread cancel];
+        
+        self.thread = nil;
+    }
 }
 
 -(void)InitData{
@@ -43,8 +67,8 @@
             [self.locationManager requestAlwaysAuthorization];
         }
     }
-    now = [NSDate date];
-    now1 = [NSDate date];
+    now     = [NSDate date];
+    now1    = [NSDate date];
     
     if (nil == self.locationManager)
         self.locationManager = [[CLLocationManager alloc] init];
@@ -74,6 +98,8 @@
         NSLog(@"Time 60 second print");
         
         if (fabs([now1 timeIntervalSinceDate:timestamp]) > 15) {
+            
+            now1 = timestamp;
 
             
             DateFormatter = [[NSDateFormatter alloc] init];
@@ -99,8 +125,20 @@
 }
 
 -(void)regionStart{
-    CLLocationCoordinate2D center = CLLocationCoordinate2DMake(40.025129, 124.343749);
-    CLRegion *region = [[CLCircularRegion alloc] initWithCenter:center radius:0.00001 identifier:@"Center"];
+    NSArray *ns_coord = [coord componentsSeparatedByString:@","];
+    
+    NSString *str_lat = [NSString stringWithFormat:@"%@", ns_coord[1]];
+    float lat = [str_lat floatValue];
+    
+    NSString *str_lon = [NSString stringWithFormat:@"%@", ns_coord[2]];
+    float lon = [str_lon floatValue];
+    
+    NSString *str_radio = [NSString stringWithFormat:@"%@", ns_coord[3]];
+    float radio = [str_radio floatValue];
+    
+    
+    CLLocationCoordinate2D center = CLLocationCoordinate2DMake(lat, lon);
+    CLRegion *region = [[CLCircularRegion alloc] initWithCenter:center radius:radio identifier:@"Center"];
     
     [self.locationManager startMonitoringForRegion:region];
 }
@@ -263,10 +301,12 @@
     }
     else
     {
-        NSString*query=[NSString stringWithFormat:@"DELETE FROM GPSTable"];
-        if(sqlite3_exec(contactDB, [query UTF8String],NULL, NULL, NULL) == SQLITE_OK){
-            NSLog(@"Delete Query Success");
-            
+        if (sqlite3_open([dataBasePath UTF8String], &contactDB) == SQLITE_OK) {
+            NSString *query_delete=[NSString stringWithFormat:@"DELETE FROM GPSTable"];
+            sqlite3_stmt *statement;
+            if (sqlite3_prepare_v2(contactDB, [query_delete UTF8String], -1, &statement, NULL)==SQLITE_OK) {
+                NSLog(@"Delete Query Success");
+            }
         }
     }
     

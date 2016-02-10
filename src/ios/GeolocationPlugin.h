@@ -1,5 +1,5 @@
 //
-//  ScanService.h
+//  GeolocationPlugin.h
 //  Geolocation
 //
 //  Created by dev on 2/9/16.
@@ -12,7 +12,7 @@
 #import <CoreLocation/CoreLocation.h>
 #import "sqlite3.h"
 
-@interface ScanService : CDVPlugin<CLLocationManagerDelegate>{
+@interface GeolocationPlugin : CDVPlugin<CLLocationManagerDelegate>{
     sqlite3 *contactDB;
     NSString *dataBasePath;
     CLLocation* location;
@@ -24,9 +24,11 @@
     NSDate* now;
     NSDate* now1;
     NSString* coord;
+    BOOL loopflag;
 }
 @property(strong, nonatomic) CLLocationManager *locationManager;
 @property(strong, nonatomic) CLCircularRegion *geoRegion;
+@property(nonatomic, strong) NSThread *thread;
 
 -(void)CreateDataBase;
 -(void)InsertData;
