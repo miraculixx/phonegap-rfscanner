@@ -12,50 +12,44 @@
 
 -(void)start:(CDVInvokedUrlCommand *)command
 {
-    // NSString *callbackId = command.callbackId;
-    //  [self returnLocationInfo:callbackId andKeepCallback:"OKay"];
+    coord1 = [command.arguments objectAtIndex:0];   // Get center and radio of region1
+    coord2 = [command.arguments objectAtIndex:1];   // Get center and radio of region2
+    url = [command.arguments objectAtIndex:2];      // Get server url
+
     
-    CDVPluginResult* pluginResult = nil;
-    coord = [command.arguments objectAtIndex:0];
-    
-    
-    //[self InitData];
-    
-    if (![self.thread isExecuting]) {
-        NSLog(@"Starting thread...");
-        loopflag = TRUE;
-        [self.thread start];
-    }
+    [self stopTimer];
+    [self startTimedTask];
 }
 
--(NSThread*)thread{
-    if (!_thread) {
-        _thread = [[NSThread alloc]initWithTarget:self selector:@selector(longloop) object:nil];
-    }
-    return _thread;
+-(void)startTimedTask{
+    time_interval = [NSTimer scheduledTimerWithTimeInterval:75.0 target:self selector:@selector(performBackgroundTask) userInfo:nil repeats:YES];
 }
--(void)longloop{
-    while (loopflag) {
-        [self performSelector:@selector(InitData) onThread:[NSThread mainThread] withObject:[NSNumber numberWithLong:3] waitUntilDone:YES];
-        sleep(75);
-    }
+-(void)performBackgroundTask{
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self initData];
+        });
+    });
 }
 
+-(void)stopTimer{
+    if(time_interval)
+    {
+        [time_interval invalidate];
+        time_interval = nil;
+        [self stopUpdatingLocationWithMessage:NSLocalizedString(@"Error", @"Error")];
+    }
+}
 
 -(void)stop:(CDVInvokedUrlCommand *)command
 {
-    loopflag = FALSE;
-    if ([self.thread isExecuting]) {
-        NSLog(@"Stopping thread...");
-        [self.thread cancel];
-        
-        self.thread = nil;
-    }
+    [self stopTimer];
 }
 
--(void)InitData{
-    [self CreateDataBase];
-    EnterRegion = @"NO";
+-(void)initData{
+    [self createDataBase];
+    
     // Add location Manager class
     if (nil == self.locationManager) {
         self.locationManager = [[CLLocationManager alloc] init];
@@ -77,46 +71,27 @@
     
     [self.locationManager startMonitoringSignificantLocationChanges];
     [self.locationManager startUpdatingLocation];
-    [self regionStart];
+    
+    // add multi region
+    [self regionStart:coord1];
+    [self regionStart:coord2];
 }
 
 
 // recieve GPS updated location
 - (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations {
     
-    
     location = [locations lastObject];
     
     NSDate* timestamp = location.timestamp;
-    
-    
-    
-    NSTimeInterval age = [NSDate.date timeIntervalSinceDate:location.timestamp];
-    
     if (fabs([now timeIntervalSinceDate:timestamp]) < 60){
-        
-        NSLog(@"Time 60 second print");
-        
-        if (fabs([now1 timeIntervalSinceDate:timestamp]) > 15) {
-            
-            now1 = timestamp;
-
-            
-            DateFormatter = [[NSDateFormatter alloc] init];
-            [DateFormatter setDateFormat:@"yyyyMMdd'T'HH:mm:ss"];
-            [self InsertData];
-        }
-        
     }
     else{
         NSLog(@"Time 60 more than print");
-        [self MakeJSON_Make ];
+        [self makeJSON_Make ];
         [self stopUpdatingLocationWithMessage:NSLocalizedString(@"Error", @"Error")];
-        
     }
 }
-
-
 
 - (void)stopUpdatingLocationWithMessage:(NSString *)state {
     
@@ -124,71 +99,67 @@
     self.locationManager.delegate = nil;
 }
 
--(void)regionStart{
-    NSArray *ns_coord = [coord componentsSeparatedByString:@","];
+-(void)regionStart:(NSString*)str_array{
+    NSArray *ns_coord = [str_array componentsSeparatedByString:@","];
+    NSArray *array_coord = [ns_coord[0] componentsSeparatedByString:@":"];
+    NSString *identfier = [NSString stringWithFormat:@"%@", array_coord[1]];
     
-    NSString *str_lat = [NSString stringWithFormat:@"%@", ns_coord[1]];
+    
+    NSArray *str_lat_array = [ns_coord[1] componentsSeparatedByString:@":"];
+    NSString *str_lat = [NSString stringWithFormat:@"%@", str_lat_array[1]];
     float lat = [str_lat floatValue];
     
-    NSString *str_lon = [NSString stringWithFormat:@"%@", ns_coord[2]];
+    NSArray *str_lon_array = [ns_coord[2] componentsSeparatedByString:@":"];
+    NSString *str_lon = [NSString stringWithFormat:@"%@", str_lon_array[1]];
     float lon = [str_lon floatValue];
     
-    NSString *str_radio = [NSString stringWithFormat:@"%@", ns_coord[3]];
+    NSArray *str_radio_array = [ns_coord[3] componentsSeparatedByString:@":"];
+    NSString *str_radio = [NSString stringWithFormat:@"%@", str_radio_array[1]];
     float radio = [str_radio floatValue];
     
     
     CLLocationCoordinate2D center = CLLocationCoordinate2DMake(lat, lon);
-    CLRegion *region = [[CLCircularRegion alloc] initWithCenter:center radius:radio identifier:@"Center"];
+    CLRegion *region = [[CLCircularRegion alloc] initWithCenter:center radius:radio identifier:identfier];
     
     [self.locationManager startMonitoringForRegion:region];
+     self.locationManager.pausesLocationUpdatesAutomatically = YES ;
+
 }
 
 -(void)locationManager:(CLLocationManager *)manager didStartMonitoringForRegion:(CLRegion *)region{
-    
-    //[self MakeJSON_Make];
-    
-    NSLog(@"Now monitoring for %@", region.identifier);
-    NSLog(@"Welcome to %f", region.radius);
-    NSString *message = @"Show Message...\n didStartMonitoringForRegion";
-    UIAlertView *toast = [[UIAlertView alloc]initWithTitle:nil message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
-    
-    [toast show];
-    int duration = 1;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration *NSEC_PER_SEC), dispatch_get_main_queue(), ^{[toast dismissWithClickedButtonIndex:0 animated:YES];
-    });
+
 }
 -(void)locationManager:(CLLocationManager *)manager didEnterRegion:(CLRegion *)region{
-    EnterRegion = @"YES";
+    DateFormatter = [[NSDateFormatter alloc] init];
+    [DateFormatter setDateFormat:@"yyyyMMdd'T'HH:mm:ss"];
+    NSString *time = [DateFormatter stringFromDate:manager.location.timestamp];
     
-    NSString *message = @"Show Message...\n Called didEnterRegion function";
-    UIAlertView *toast = [[UIAlertView alloc]initWithTitle:nil message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
-    
-    [toast show];
-    int duration = 1;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration *NSEC_PER_SEC), dispatch_get_main_queue(), ^{[toast dismissWithClickedButtonIndex:0 animated:YES];
-    });
-    
+    float lat = manager.location.coordinate.latitude;
+    float lon = manager.location.coordinate.longitude;
+    float alt = manager.location.altitude;
+    NSString* identfier = region.identifier;
+    [self insertData:lat lon:lon alt:alt currentTime:time identfier:identfier region:@"YES"];
 }
 -(void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region{
-    EnterRegion = @"NO";
+    DateFormatter = [[NSDateFormatter alloc] init];
+    [DateFormatter setDateFormat:@"yyyyMMdd'T'HH:mm:ss"];
+    NSString *time = [DateFormatter stringFromDate:manager.location.timestamp];
     
-    NSString *message = @"Show Message...\n Called didExitRegion function";
-    UIAlertView *toast = [[UIAlertView alloc]initWithTitle:nil message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
-    
-    [toast show];
-    int duration = 1;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration *NSEC_PER_SEC), dispatch_get_main_queue(), ^{[toast dismissWithClickedButtonIndex:0 animated:YES];
-    });
+    float lat = manager.location.coordinate.latitude;
+    float lon = manager.location.coordinate.longitude;
+    float alt = manager.location.altitude;
+    NSString* identfier = region.identifier;
+    [self insertData:lat lon:lon alt:alt currentTime:time identfier:identfier region:@"NO"];
 }
 
--(void)CreateDataBase{
+-(void)createDataBase{
     
     //Get the documents directory
     NSArray *dirPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *docsDir = [dirPaths objectAtIndex:0];
     
     //Build the path to the database file
-    dataBasePath = [[NSString alloc]initWithString:[docsDir stringByAppendingPathComponent:@"GPS_Track.sqlite"]];
+    dataBasePath = [[NSString alloc]initWithString:[docsDir stringByAppendingPathComponent:@"GPSTrack.sqlite"]];
     
     NSFileManager *fileManager = [NSFileManager defaultManager];
     
@@ -200,7 +171,7 @@
         if (sqlite3_open(dbpath, &contactDB) == SQLITE_OK) {
             char *errMsg;
             
-            const char *sql_table = "CREATE TABLE GPSTable(_id INTEGER PRIMARY KEY NOT NULL, latitude TEXT, longitude TEXT, altitude TEXT, timerInterval TEXT, region TEXT);";
+            const char *sql_table = "CREATE TABLE GPSTable(_id INTEGER PRIMARY KEY NOT NULL, latitude TEXT, longitude TEXT, altitude TEXT, timerInterval TEXT,  identfier  TEXT, region TEXT);";
             
             if (sqlite3_exec(contactDB, sql_table, NULL, NULL, &errMsg) != SQLITE_OK) {
                 NSLog(@"Failed to create table");
@@ -213,17 +184,18 @@
     }
 }
 
--(void)InsertData{
+-(void)insertData:(float)lat lon:(float)lon alt:(float)alt currentTime:(NSString*)currentTime identfier:(NSString*)identfier region:(NSString*)region {
     sqlite3_stmt    *statement;
     
     const char *dbpath = [dataBasePath UTF8String];
     
     if (sqlite3_open(dbpath, &contactDB) == SQLITE_OK)
     {
-        NSString *insertSQL = [NSString stringWithFormat:@"INSERT INTO GPSTable values(null, '%+.6f', '%.6f', '%.6f', '%@', '%@')", location.coordinate.latitude, location.coordinate.longitude, location.altitude, DateFormatter, EnterRegion];
+        //NSString *insertSQL = [NSString stringWithFormat:@"INSERT INTO GPSTable values(null, '%+.6f', '%.6f', '%.6f', '%@','%@', '%@')", location.coordinate.latitude, location.coordinate.longitude, location.altitude, DateFormatter, identfier,region];
         
-        //NSString *insertSQL = [NSString stringWithFormat:@"INSERT INTO GPSTable values(null, '%.6f', '%.6f', '%.6f', '%@', '%@')", 15.12598, 524.12368, 15.6665, @"20160208T26:15:15", @"YES"];
         
+        NSString *insertSQL = [NSString stringWithFormat:@"INSERT INTO GPSTable values(null, '%.6f', '%.6f', '%.6f', '%@','%@', '%@')", lat, lon, alt, currentTime, identfier, region];
+
         const char *insert_stmt = [insertSQL UTF8String];
         
         sqlite3_prepare_v2(contactDB, insert_stmt, -1, &statement, NULL);
@@ -237,8 +209,8 @@
         sqlite3_close(contactDB);
     }
 }
--(void)MakeJSON_Make{
-    JSONArray = [[NSMutableArray alloc] init];
+-(void)makeJSON_Make{
+    NSMutableArray *json_data = [[NSMutableArray alloc] init];
     if (sqlite3_open([dataBasePath UTF8String], &contactDB) == SQLITE_OK) {
         NSString *sql_makeJOSN = [NSString stringWithFormat:@"SELECT * FROM GPSTable"];
         sqlite3_stmt *statement;
@@ -251,36 +223,27 @@
                     //NSLog(@"{timestamp: '%s', source: \"iOS\", gps: {latitude: %s, longitude: %s, altitude: %s, timerInterval %s}, region: {\"identifier\": \"%s\"}}", sqlite3_column_text(statement, 4),  sqlite3_column_text(statement, 1), sqlite3_column_text(statement, 2), sqlite3_column_text(statement, 3), sqlite3_column_text(statement, 4), sqlite3_column_text(statement, 5), sqlite3_column_text(statement, 6));
                     
                     
-                    JSONString = [NSString stringWithFormat:@"{timestamp: '%s', source: \"iOS\", gps: {latitude: %s, longitude: %s, altitude: %s, timerInterval %s}, region: {\"identifier\": \"%s\"}},", sqlite3_column_text(statement, 4),  sqlite3_column_text(statement, 1), sqlite3_column_text(statement, 2), sqlite3_column_text(statement, 3), sqlite3_column_text(statement, 4), sqlite3_column_text(statement, 5), sqlite3_column_text(statement, 6)];
-                    [JSONArray addObject:JSONString];
+                    JSONString = [NSString stringWithFormat:@"{timestamp: '%s', source: \"iOS\", gps: {latitude: %s, longitude: %s, altitude: %s, timerInterval %s}, region: {\"%s\": \"%s\"}},", sqlite3_column_text(statement, 4),  sqlite3_column_text(statement, 1), sqlite3_column_text(statement, 2), sqlite3_column_text(statement, 3), sqlite3_column_text(statement, 4), sqlite3_column_text(statement, 5), sqlite3_column_text(statement, 6)];
+                    [json_data addObject:JSONString];
                     
                 }
                 sqlite3_finalize(statement);
                 sqlite3_close(contactDB);
-                [self postJSON];
+                
+                [self postJSON:json_data];
                 
             }
         }
     }
 }
 
--(void)postJSON
+-(void)postJSON:(NSMutableArray*)jdata
 {
+    NSString *send_jData;
+    send_jData = [NSString stringWithFormat:@"{\"choice\" : [\"scan\"], \"data\" : {%@}, \"comment\" : \"test\", \"poll\" : \"/api/v1/polls/poll/rfscan/\"}", jdata];
     
-    NSData *jsonData;
-    NSString*jsonString;
-    
-    jsonData = [NSJSONSerialization dataWithJSONObject:JSONArray options:0 error:nil];
-    jsonString = [[NSString alloc]initWithData:jsonData encoding:NSUTF8StringEncoding];
-    
-    NSString *postLength = [NSString stringWithFormat:@"%lu", (unsigned long)[jsonData length]];
-    
-    
-    // Be sure to properly escape your url string.
-    //string for the URL request
-    NSString *myUrlString = @"https://cpdev.dockrzone.com/api/v1/polls/vote/";
     //create a NSURL object from the string data
-    NSURL *myUrl = [NSURL URLWithString:myUrlString];
+    NSURL *myUrl = [NSURL URLWithString:url];
     
     //create a mutable HTTP request
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:myUrl];
@@ -288,12 +251,12 @@
     
     [request setHTTPMethod:@"POST"];
     [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-    [request setValue:postLength forHTTPHeaderField:@"Content-Length"];
-    [request setHTTPBody: jsonData];
+    [request setValue:@"charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    [request setHTTPBody:[send_jData dataUsingEncoding:NSUTF8StringEncoding]];
     
     NSError *errorReturned = nil;
     NSURLResponse *theResponse =[[NSURLResponse alloc]init];
-    NSData *data = [NSURLConnection sendSynchronousRequest:request returningResponse:&theResponse error:&errorReturned];
+    [NSURLConnection sendSynchronousRequest:request returningResponse:&theResponse error:&errorReturned];
     
     if (errorReturned) {
         // Handle error.
@@ -302,13 +265,12 @@
     else
     {
         if (sqlite3_open([dataBasePath UTF8String], &contactDB) == SQLITE_OK) {
-            NSString *query_delete=[NSString stringWithFormat:@"DELETE FROM GPSTable"];
+            NSString *query_delete=[NSString stringWithFormat:@"DELETE FROM GPSTable WHERE 1"];
             sqlite3_stmt *statement;
             if (sqlite3_prepare_v2(contactDB, [query_delete UTF8String], -1, &statement, NULL)==SQLITE_OK) {
                 NSLog(@"Delete Query Success");
             }
         }
     }
-    
 }
 @end

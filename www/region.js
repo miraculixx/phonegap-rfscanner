@@ -57,23 +57,29 @@ var Controller = function() {
             console.log("Listener started");
 			$(".start").on("click", this.onStart);
 			$(".stop").on("click", this.onStop);
+           // navigator.geolocation.getCurrentPosition(this.onSuccess, this.onError);
+           //watchID = navigator.geolocation.watchPosition(this.onWatchSuccess, this.onError, { timeout: 30000 });
         },
 		onStart: function(){
-            
+            //showAlert("ok");
             var coord = [];
             $(".coord1 input").each(function(index){
                                     coord[index]=$(this).val();
                                     });
-            var coord1 = coord[0]+","+coord[1]+","+coord[2]+","+coord[3];//{"coord1":coord[0],"lat":coord[1],"lon":coord[2],"radius":coord[3]};
+            
+            var coord1 = "{'identfier':" +coord[0]+",'lat':"+coord[1]+",'lon':"+coord[2]+",'radius':"+coord[3]+"}";
+            
+            
             $(".coord2 input").each(function(index){
                                     coord[index]=$(this).val();
                                     });
-            var coord2 = coord[0]+","+coord[1]+","+coord[2]+","+coord[3];//{"coord2":coord[0],"lat":coord[1],"lon":coord[2],"radius":coord[3]};
-           
-			cordova.exec(success, failure, 'GeolocationPlugin', 'start', [coord1,coord2]);
+            var coord2 = "{'identfier':" +coord[0]+",'lat':"+coord[1]+",'lon':"+coord[2]+",'radius':"+coord[3]+"}";
+            
+            var serverUrl = $(".server input").val();
+			cordova.exec(success, failure, 'ScanService', 'start', [coord1,coord2,serverUrl]);
 		},
 		onStop: function() {
-			cordova.exec(success, failure, 'GeolocationPlugin', 'stop', []);
+			cordova.exec(success, failure, 'ScanService', 'stop', []);
 		},
         
         onError: function() {
