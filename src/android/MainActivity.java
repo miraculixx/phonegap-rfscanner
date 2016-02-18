@@ -28,6 +28,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.widget.Toast;
 
+
 import org.apache.cordova.*;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,11 +43,12 @@ import java.util.List;
 
 public class MainActivity extends CordovaActivity implements LocationListener
 {
-    public DBHelper w_dbManager, b_dbManager;
+    public DBHelper w_dbManager, b_dbManager, g_dbManager;
     private static Context context;
 
     private final int wifiDB = 1;
     private final int bteDB = 2;
+    private final int gpsDB = 3;
 
     private static double lat, lon, alt;
     private static String timestamp = "yyyyMMdd'T'HH:mm:ss";
@@ -57,7 +59,9 @@ public class MainActivity extends CordovaActivity implements LocationListener
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
         context = getApplicationContext();
+
         LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
         Criteria criteria = new Criteria();
@@ -66,14 +70,12 @@ public class MainActivity extends CordovaActivity implements LocationListener
         provider = locationManager.getBestProvider(criteria, true);
 
         if(provider == null && !locationManager.isProviderEnabled(provider)){
-
             // Get the location from the given provider
             List<String> list = locationManager.getAllProviders();
 
             for(int i = 0; i < list.size(); i++){
                 //Get device name;
                 String temp = list.get(i);
-
                 //check usable
                 if(locationManager.isProviderEnabled(temp)){
                     provider = temp;
@@ -83,7 +85,6 @@ public class MainActivity extends CordovaActivity implements LocationListener
         }
         //get location where reference last.
         Location location = locationManager.getLastKnownLocation(provider);
-
 
         if(location == null)
             Toast.makeText(this, "There are no available position information providers.", Toast.LENGTH_SHORT).show();
@@ -153,25 +154,20 @@ public class MainActivity extends CordovaActivity implements LocationListener
     }
 
     @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-
-    }
+    public void onStatusChanged(String s, int i, Bundle bundle) {}
 
     @Override
-    public void onProviderEnabled(String s) {
-
-    }
+    public void onProviderEnabled(String s) {}
 
     @Override
-    public void onProviderDisabled(String s) {
-    }
+    public void onProviderDisabled(String s) {}
 
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... urls) {
 
             JSONObject jObject;
-            JSONArray jArray_wifi, jArray_bte;
+            JSONArray jArray_wifi, jArray_bte, jArray_gps;
 
             w_dbManager = new DBHelper(context, "WiFi.db", null, 1);
             jArray_wifi = w_dbManager.PrintData(wifiDB);
@@ -179,12 +175,16 @@ public class MainActivity extends CordovaActivity implements LocationListener
             b_dbManager = new DBHelper(context, "BTE.db", null, 1);
             jArray_bte = b_dbManager.PrintData(bteDB);
 
+            g_dbManager = new DBHelper(context, "GPSList.db", null, 3);
+            jArray_gps = g_dbManager.PrintData(gpsDB);
+
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
             String date = sdf.format(new Date());
 
             jObject = new JSONObject();
             JSONObject subObject = new JSONObject();
+            JSONObject dataObject = new JSONObject();
 
             try {
                 subObject.put("lat", lat);
@@ -193,10 +193,13 @@ public class MainActivity extends CordovaActivity implements LocationListener
                 subObject.put("timestamp", timestamp);
 
                 jObject.put("choice", "scan");
-                jObject.put("timestamp", date);
-                jObject.put("devices", jArray_bte);
-                jObject.put("networks", jArray_wifi);
-                jObject.put("gps", subObject);
+
+                dataObject.put("timestamp", date);
+                dataObject.put("devices", jArray_bte);
+                dataObject.put("networks", jArray_wifi);
+                dataObject.put("gps", jArray_gps);
+
+                jObject.put("data", dataObject);
                 jObject.put("comment", "rfscanner");
                 jObject.put("poll", "/api/v1/polls/poll/rfscan");
 
@@ -211,6 +214,7 @@ public class MainActivity extends CordovaActivity implements LocationListener
         protected void onPostExecute(String result) {
             w_dbManager.delete("delete from SCAN_LIST where 1");
             b_dbManager.delete("delete from SCAN_LIST where 1");
+            g_dbManager.delete("delete from SCAN_LIST where 1");
             Toast.makeText(context, "Data Sent!", Toast.LENGTH_LONG).show();
         }
     }

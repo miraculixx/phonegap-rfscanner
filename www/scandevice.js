@@ -16,9 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-var controller = null;
-var isStart = false;
-var timer = null;
 var app = {
     // Application Constructor
     initialize: function() {
@@ -40,14 +37,14 @@ var app = {
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
-        
-        controller = new Controller();
-       
+         controller = new Controller();
+
+        console.log('Received Event: ' + id);
     }
 };
 
 app.initialize();
-
+var watchID = null;
 var Controller = function() {
     var controller = {
         self: null,
@@ -56,40 +53,69 @@ var Controller = function() {
             this.bindEvents();            
         },
 
-        bindEvents: function() {
+         bindEvents: function() {
             console.log("Listener started");
-            $(".stop_btn").attr("disabled",true);
-        	$(".start_btn").on('click',this.onStart);
-        	$(".stop_btn").on('click',this.onStop);
+			$(".start").on("click", this.onStart);
+			$(".stop").on("click", this.onStop);
+             $("#selectNum").on("click",this.addCoords);
+           // navigator.geolocation.getCurrentPosition(this.onSuccess, this.onError);
+           //watchID = navigator.geolocation.watchPosition(this.onWatchSuccess, this.onError, { timeout: 30000 });
         },
-        onStart: function() {
-            var interval = parseInt($('#interval').val())*1000;
-            if(interval<60000 && interval>0)
-               {
-               var server=$("#server").val();
-                cordova.exec(success, failure, 'ScanDevice', 'start', [interval,server]);
-               $('.status.listening').css("display","none");
-               $('.status.received').css("display","block");
-               $(".stop_btn").attr("disabled",false);
-               $(".start_btn").attr("disabled",true);
-               }
+    addCoords: function(){
+        
+        var coordNum = $("#coordNumber").val();
+        var DivHtml = "";
+        for (var i=1; i<=coordNum; i++)
+        {
+            DivHtml+="<h2>Coord"+i+":</h2>";
+            DivHtml+="<div class='coord'><label value='Coord"+i+":'></label>";
+            DivHtml+="<input value='Office'><input value='45.5'><input value='8.2'><input value='100'></div>";
+        }
+        $("#coordDiv").html(DivHtml);
+        
+    },
+		onStart: function(){
+            var interval = parseInt($("#interval").val())*1000;
+            if(interval <60000 && interval>0)
+            {
+            var coords = ""; var coordValues = [];
+            $(".coord").each(function(index){
+                             $(this).children("input").each(function(ind){
+                                                            coordValues[ind] = $(this).val();
+                                                            });
+                             coords +="{'identfier':" +coordValues[0]+",'lat':"+coordValues[1]+",'lon':"+coordValues[2]+",'radius':"+coordValues[3]+"}"+";";
+                             });
+            /*$(".coord1 input").each(function(index){
+                                    coord[index]=$(this).val();
+                                    });
+            
+            var coord1 = "{'identfier':" +coord[0]+",'lat':"+coord[1]+",'lon':"+coord[2]+",'radius':"+coord[3]+"}";
+            
+            
+            $(".coord2 input").each(function(index){
+                                    coord[index]=$(this).val();
+                                    });
+            var coord2 = "{'identfier':" +coord[0]+",'lat':"+coord[1]+",'lon':"+coord[2]+",'radius':"+coord[3]+"}";
+            */
+                alert(coords);
+            var serverUrl = $(".server input").val();
+			cordova.exec(success, failure, 'ScanDevice', 'start', [coords,serverUrl,interval]);
+            }
             else
-                showAlert("You have to set interval between 0~60.");
-        },
-
-        onStop: function() {
-            cordova.exec(success, failure, 'ScanDevice', 'stop', []);
-            $('.status.listening').css("display","block");
-            $('.status.received').css("display","none");
-            $(".stop_btn").attr("disabled",true);
-            $(".start_btn").attr("disabled",false);
+                showAlert("You have to set interval between 0~60s");
+		},
+		onStop: function() {
+			cordova.exec(success, failure, 'ScanDevice', 'stop', []);
+		},
+        
+        onError: function() {
+           
 
         }
     }
     controller.initialize();
     return controller;
 }
-
 function success(message){
      showAlert(message);
 }
@@ -100,7 +126,7 @@ function showAlert(message) {
         navigator.notification.alert(
             message,  // message
             alertDismissed,         // callback
-            'Scan Device',            // title
+            'Get Gelocation',            // title
             'Done'                  // buttonName
         );
     }

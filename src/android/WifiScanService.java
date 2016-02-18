@@ -94,7 +94,6 @@ public class WifiScanService extends Service {
                 {
                     int level = WifiManager.calculateSignalLevel(result.level, maxLevel);
                     String SSID = result.SSID;
-                    String capabilities = result.capabilities;
                     dbManager.insert("insert into SCAN_LIST values(null,'" + SSID + "', '" + level + "');");
                 }
             }
