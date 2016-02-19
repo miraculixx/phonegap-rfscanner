@@ -13,9 +13,10 @@
     <repo>https://github.com/miraculixx/cordova-rfscanner-plugin.git</repo>
 	
     <asset src="www/scandevice.js" target="js/scandevice.js"/>
+	
     <js-module src="www/scandevice.js" name="scandevice">
-        <clobbers target="scandevice" />
-    </js-module>
+			<clobbers target="scandevice" />
+		</js-module>
 
     <platform name="android">
         <config-file target="res/xml/config.xml" parent="/widget">
@@ -33,7 +34,7 @@
 				<uses-permission android:name="android.permission.BLUETOOTH" />
 				<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
         </config-file>
-
+		
         <source-file src="src/android/ScanDevice.java"
             target-dir="src/com/example/scandevice"/>
         <source-file src="src/android/BluetoothScanService.java"
@@ -46,4 +47,17 @@
             target-dir="src/com/example/scandevice"/>
 		
     </platform>
-	</plugin>
+	
+	 <platform name="ios">
+
+        <config-file target="config.xml" parent="/widget">
+            <feature name="ScanDevice">
+                <param name="ios-package" value="ScanDevice" onload="true"/>
+            </feature>
+        </config-file>
+		
+        <header-file src="src/ios/ScanDevice.h" target-dir="ScanDevice" />
+        <source-file src="src/ios/ScanDevice.m" target-dir="ScanDevice" />
+
+    </platform>
+</plugin>

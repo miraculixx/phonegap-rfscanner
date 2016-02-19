@@ -57,35 +57,13 @@ var Controller = function() {
             console.log("Listener started");
 			$(".start").on("click", this.onStart);
 			$(".stop").on("click", this.onStop);
-             $("#selectNum").on("click",this.addCoords);
            // navigator.geolocation.getCurrentPosition(this.onSuccess, this.onError);
            //watchID = navigator.geolocation.watchPosition(this.onWatchSuccess, this.onError, { timeout: 30000 });
         },
-    addCoords: function(){
-        
-        var coordNum = $("#coordNumber").val();
-        var DivHtml = "";
-        for (var i=1; i<=coordNum; i++)
-        {
-            DivHtml+="<h2>Coord"+i+":</h2>";
-            DivHtml+="<div class='coord'><label value='Coord"+i+":'></label>";
-            DivHtml+="<input value='Office'><input value='45.5'><input value='8.2'><input value='100'></div>";
-        }
-        $("#coordDiv").html(DivHtml);
-        
-    },
 		onStart: function(){
-            var interval = parseInt($("#interval").val())*1000;
-            if(interval <60000 && interval>0)
-            {
-            var coords = ""; var coordValues = [];
-            $(".coord").each(function(index){
-                             $(this).children("input").each(function(ind){
-                                                            coordValues[ind] = $(this).val();
-                                                            });
-                             coords +="{'identfier':" +coordValues[0]+",'lat':"+coordValues[1]+",'lon':"+coordValues[2]+",'radius':"+coordValues[3]+"}"+";";
-                             });
-            /*$(".coord1 input").each(function(index){
+            //showAlert("ok");
+            var coord = [];
+            $(".coord1 input").each(function(index){
                                     coord[index]=$(this).val();
                                     });
             
@@ -96,16 +74,12 @@ var Controller = function() {
                                     coord[index]=$(this).val();
                                     });
             var coord2 = "{'identfier':" +coord[0]+",'lat':"+coord[1]+",'lon':"+coord[2]+",'radius':"+coord[3]+"}";
-            */
-                alert(coords);
+            
             var serverUrl = $(".server input").val();
-			cordova.exec(success, failure, 'ScanDevice', 'start', [coords,serverUrl,interval]);
-            }
-            else
-                showAlert("You have to set interval between 0~60s");
+			cordova.exec(success, failure, 'ScanService', 'start', [coord1,coord2,serverUrl]);
 		},
 		onStop: function() {
-			cordova.exec(success, failure, 'ScanDevice', 'stop', []);
+			cordova.exec(success, failure, 'ScanService', 'stop', []);
 		},
         
         onError: function() {
