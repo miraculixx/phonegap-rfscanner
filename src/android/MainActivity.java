@@ -20,10 +20,6 @@
 package com.example.scandevice;
 
 import android.content.Context;
-import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -39,9 +35,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 
-public class MainActivity extends CordovaActivity implements LocationListener
+public class MainActivity extends CordovaActivity
 {
     public DBHelper w_dbManager, b_dbManager, g_dbManager;
     private static Context context;
@@ -50,48 +45,12 @@ public class MainActivity extends CordovaActivity implements LocationListener
     private final int bteDB = 2;
     private final int gpsDB = 3;
 
-    private static double lat, lon, alt;
-    private static String timestamp = "yyyyMMdd'T'HH:mm:ss";
-
-    String provider;
-
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
 
         context = getApplicationContext();
-
-        LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
-        Criteria criteria = new Criteria();
-
-        // Getting the name of the provider that meets the criteria
-        provider = locationManager.getBestProvider(criteria, true);
-
-        if(provider == null && !locationManager.isProviderEnabled(provider)){
-            // Get the location from the given provider
-            List<String> list = locationManager.getAllProviders();
-
-            for(int i = 0; i < list.size(); i++){
-                //Get device name;
-                String temp = list.get(i);
-                //check usable
-                if(locationManager.isProviderEnabled(temp)){
-                    provider = temp;
-                    break;
-                }
-            }
-        }
-        //get location where reference last.
-        Location location = locationManager.getLastKnownLocation(provider);
-
-        if(location == null)
-            Toast.makeText(this, "There are no available position information providers.", Toast.LENGTH_SHORT).show();
-        else
-            //GPS start from last location.
-            onLocationChanged(location);
-
 
         // Set by <content src="index.html" /> in config.xml
         loadUrl(launchUrl);
@@ -142,25 +101,6 @@ public class MainActivity extends CordovaActivity implements LocationListener
         return "Data Sent";
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-
-        lat = location.getLatitude();
-        lon = location.getLongitude();
-        alt = location.getAltitude();
-
-        SimpleDateFormat GPStime = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
-        timestamp = GPStime.format (location.getTime());
-    }
-
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {}
-
-    @Override
-    public void onProviderEnabled(String s) {}
-
-    @Override
-    public void onProviderDisabled(String s) {}
 
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
         @Override
@@ -183,22 +123,15 @@ public class MainActivity extends CordovaActivity implements LocationListener
             String date = sdf.format(new Date());
 
             jObject = new JSONObject();
-            JSONObject subObject = new JSONObject();
             JSONObject dataObject = new JSONObject();
 
             try {
-                subObject.put("lat", lat);
-                subObject.put("lon", lon);
-                subObject.put("alt", alt);
-                subObject.put("timestamp", timestamp);
-
-                jObject.put("choice", "scan");
-
                 dataObject.put("timestamp", date);
                 dataObject.put("devices", jArray_bte);
                 dataObject.put("networks", jArray_wifi);
                 dataObject.put("gps", jArray_gps);
 
+                jObject.put("choice", "scan");
                 jObject.put("data", dataObject);
                 jObject.put("comment", "rfscanner");
                 jObject.put("poll", "/api/v1/polls/poll/rfscan");

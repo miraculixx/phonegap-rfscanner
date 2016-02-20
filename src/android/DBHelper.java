@@ -10,9 +10,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- * Created by Slonic on 1/26/2016.
- */
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+
+
 public class DBHelper extends SQLiteOpenHelper {
 
     private int g_version;
@@ -55,9 +56,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public JSONArray PrintData(int v) {
         SQLiteDatabase db = getReadableDatabase();
-        JSONObject jObject = new JSONObject();
         JSONArray jArray = new JSONArray();
-        String str = "";
 
         Cursor cursor = db.rawQuery("select * from SCAN_LIST", null);
         while(cursor.moveToNext()) {
@@ -89,15 +88,26 @@ public class DBHelper extends SQLiteOpenHelper {
                 }
             }
             else if (v == 3){//GPS:
-
                 JSONObject subObject = new JSONObject();
+                JSONObject regionObject = new JSONObject();
+                JSONObject gpsObject = new JSONObject();
+
+                Calendar c = Calendar.getInstance();
+                SimpleDateFormat strtime = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+                String timestamp = strtime.format(c.getTime());
                 try {
-                    subObject.put("identifier", cursor.getString(1));
-                    subObject.put("Enter/Exit", cursor.getString(2));
-                    subObject.put("lat", cursor.getString(3));
-                    subObject.put("lon", cursor.getString(4));
-                    subObject.put("alt", cursor.getString(5));
-                    subObject.put("timestamp", cursor.getString(6));
+                    regionObject.put(cursor.getString(1), cursor.getString(2));
+
+                    gpsObject.put("lat", cursor.getString(3));
+                    gpsObject.put("lon", cursor.getString(4));
+                    gpsObject.put("alt", cursor.getString(5));
+                    gpsObject.put("timestamp", cursor.getString(6));
+                                                            //    {
+                    subObject.put("timestamp", timestamp);  //      timestamp: 'yyyymmddThhmmss+000' ,
+                    subObject.put("source", "android");     //      source: “android”,
+                    subObject.put("gps", gpsObject);        //      gps: { lat: , lon:, alt: , timestamp: yyymmddThhmmss+000 } // for location monitoring
+                    subObject.put("region", regionObject);  //      region: { “identifier” : “enter | exit” } // for region monitoring
+                                                            //    },
                     jArray.put(subObject);
 
                 } catch (JSONException e) {

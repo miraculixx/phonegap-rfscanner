@@ -18,9 +18,6 @@ import com.google.android.gms.location.LocationServices;
 
 import java.util.ArrayList;
 
-/**
- * Created by Slonic on 2/17/2016.
- */
 public class MultiRegionService extends IntentService implements ConnectionCallbacks, OnConnectionFailedListener, ResultCallback<Status> {
 
     public static final String COORD = "coord arry";

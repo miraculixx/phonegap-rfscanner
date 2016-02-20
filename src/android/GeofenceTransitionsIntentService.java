@@ -23,7 +23,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -32,7 +31,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingEvent;
@@ -49,7 +47,7 @@ import java.util.List;
  * the transition type and geofence id(s) that triggered the transition. Creates a notification
  * as the output.
  */
-public class GeofenceTransitionsIntentService extends IntentService implements LocationListener {
+public class GeofenceTransitionsIntentService extends IntentService{
 
     protected static final String TAG = "GeofenceTransitionsIS";
     private double lat, lon, alt;
@@ -57,11 +55,14 @@ public class GeofenceTransitionsIntentService extends IntentService implements L
 
     public DBHelper GPS_dbManager;
     public Geofence geofence;
-
-
-
-
     String provider;
+    Location mLastLocation;
+    LocationManager mLocationManager = null;
+
+    private static final int LOCATION_INTERVAL = 1000;
+    private static final float LOCATION_DISTANCE = 10f;
+
+
 
     /**
      * This constructor is required, and calls the super IntentService(String)
@@ -70,42 +71,44 @@ public class GeofenceTransitionsIntentService extends IntentService implements L
     public GeofenceTransitionsIntentService() {
         // Use the TAG to name the worker thread.
         super(TAG);
-}
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
-        Criteria criteria = new Criteria();
-
-        // Getting the name of the provider that meets the criteria
-        provider = locationManager.getBestProvider(criteria, true);
-
-        if(provider == null && !locationManager.isProviderEnabled(provider)){
-            // Get the location from the given provider
-            List<String> list = locationManager.getAllProviders();
-
-            for(int i = 0; i < list.size(); i++){
-                //Get device name;
-                String temp = list.get(i);
-                //check usable
-                if(locationManager.isProviderEnabled(temp)){
-                    provider = temp;
-                    break;
-                }
-            }
-        }
-        //get location where reference last.
-        Location location = locationManager.getLastKnownLocation(provider);
-
-        if(location == null)
-            Toast.makeText(this, "There are no available position information providers.", Toast.LENGTH_SHORT).show();
-        else
-            //GPS start from last location.
-            onLocationChanged(location);
     }
 
+    private class GetLocationInfo implements LocationListener{
+
+        public GetLocationInfo(String provider1){
+            mLastLocation = new Location(provider1);
+        }
+        @Override
+        public void onLocationChanged(Location location) {
+            lat = location.getLatitude();
+            lon = location.getLongitude();
+            alt = location.getAltitude();
+
+            SimpleDateFormat GPStime = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+            timestamp = GPStime.format (location.getTime());
+        }
+
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {}
+
+        @Override
+        public void onProviderEnabled(String s) {}
+
+        @Override
+        public void onProviderDisabled(String s) {}
+    }
+
+    GetLocationInfo[] mLocationListeners = new GetLocationInfo[]{
+            new GetLocationInfo(LocationManager.NETWORK_PROVIDER)
+    };
+
+    private void initializeLocationManager() {
+        Log.e(TAG, "initializeLocationManager");
+        if (mLocationManager == null) {
+            mLocationManager = (LocationManager) getApplicationContext()
+                    .getSystemService(Context.LOCATION_SERVICE);
+        }
+    }
     /**
      * Handles incoming intents.
      * @param intent sent by Location Services. This Intent is provided to Location
@@ -113,6 +116,18 @@ public class GeofenceTransitionsIntentService extends IntentService implements L
      */
     @Override
     protected void onHandleIntent(Intent intent) {
+
+        initializeLocationManager();
+        try {
+            mLocationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL,
+                    LOCATION_DISTANCE, mLocationListeners[0]);
+        } catch (java.lang.SecurityException ex) {
+            Log.i(TAG, "fail to request location update, ignore", ex);
+        } catch (IllegalArgumentException ex) {
+            Log.d(TAG, "network provider does not exist, " + ex.getMessage());
+        }
+
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
@@ -160,6 +175,9 @@ public class GeofenceTransitionsIntentService extends IntentService implements L
             List<Geofence> triggeringGeofences) {
 
         String geofenceTransitionString = getTransitionString(geofenceTransition);
+        GPS_dbManager = new DBHelper(getApplicationContext(), "GPSList.db", null, 3);
+        GPS_dbManager.insert("insert into SCAN_LIST ('_id', 'identifier', 'enter', 'lat', 'lon', 'lat', 'timestamp') values(null,'" +
+                geofence.getRequestId() + "', '" + geofenceTransitionString+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
 
         // Get the Ids of each geofence that was triggered.
         ArrayList triggeringGeofencesIdsList = new ArrayList();
@@ -224,42 +242,15 @@ public class GeofenceTransitionsIntentService extends IntentService implements L
      * @return                  A String indicating the type of transition
      */
     private String getTransitionString(int transitionType) {
-        GPS_dbManager = new DBHelper(getApplicationContext(), "GPSList.db", null, 3);
+
         switch (transitionType) {
             case Geofence.GEOFENCE_TRANSITION_ENTER:
-                GPS_dbManager.insert("insert into SCAN_LIST values(null,'" + geofence.getRequestId() + "', '" + "Enter"+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
                 return getString(R.string.geofence_transition_entered);
             case Geofence.GEOFENCE_TRANSITION_EXIT:
-                GPS_dbManager.insert("insert into SCAN_LIST values(null,'" + geofence.getRequestId() + "', '" + "Exit"+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
                 return getString(R.string.geofence_transition_exited);
             default:
-                GPS_dbManager.insert("insert into SCAN_LIST values(null,'" + geofence.getRequestId() + "', '" + "UnKnow"+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
                 return getString(R.string.unknown_geofence_transition);
         }
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-
-        lat = location.getLatitude();
-        lon = location.getLongitude();
-        alt = location.getAltitude();
-
-        SimpleDateFormat GPStime = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
-        timestamp = GPStime.format (location.getTime());
-    }
-
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String s) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String s) {
-    }
 }

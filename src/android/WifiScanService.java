@@ -11,9 +11,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import java.util.List;
-/**
- * Created by Slonic on 1/27/2016.
- */
+
 public class WifiScanService extends Service {
 
     private Handler mHandler;
