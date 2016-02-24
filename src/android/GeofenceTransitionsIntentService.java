@@ -1,17 +1,5 @@
 /**
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+2016 2 Symonhay.
  */
 
 package com.example.scandevice;
@@ -55,11 +43,11 @@ public class GeofenceTransitionsIntentService extends IntentService{
 
     public DBHelper GPS_dbManager;
     public Geofence geofence;
-    String provider;
     Location mLastLocation;
-    LocationManager mLocationManager = null;
+    LocationManager locationManager = null;
+    public GetLocationInfo listener;
 
-    private static final int LOCATION_INTERVAL = 1000;
+    private static final int LOCATION_INTERVAL = 10000;
     private static final float LOCATION_DISTANCE = 10f;
 
 
@@ -74,10 +62,6 @@ public class GeofenceTransitionsIntentService extends IntentService{
     }
 
     private class GetLocationInfo implements LocationListener{
-
-        public GetLocationInfo(String provider1){
-            mLastLocation = new Location(provider1);
-        }
         @Override
         public void onLocationChanged(Location location) {
             lat = location.getLatitude();
@@ -98,16 +82,12 @@ public class GeofenceTransitionsIntentService extends IntentService{
         public void onProviderDisabled(String s) {}
     }
 
-    GetLocationInfo[] mLocationListeners = new GetLocationInfo[]{
-            new GetLocationInfo(LocationManager.NETWORK_PROVIDER)
-    };
-
     private void initializeLocationManager() {
-        Log.e(TAG, "initializeLocationManager");
-        if (mLocationManager == null) {
-            mLocationManager = (LocationManager) getApplicationContext()
-                    .getSystemService(Context.LOCATION_SERVICE);
-        }
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        listener = new GetLocationInfo();
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, listener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, listener);
+
     }
     /**
      * Handles incoming intents.
@@ -116,19 +96,7 @@ public class GeofenceTransitionsIntentService extends IntentService{
      */
     @Override
     protected void onHandleIntent(Intent intent) {
-
         initializeLocationManager();
-        try {
-            mLocationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER, LOCATION_INTERVAL,
-                    LOCATION_DISTANCE, mLocationListeners[0]);
-        } catch (java.lang.SecurityException ex) {
-            Log.i(TAG, "fail to request location update, ignore", ex);
-        } catch (IllegalArgumentException ex) {
-            Log.d(TAG, "network provider does not exist, " + ex.getMessage());
-        }
-
-
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
             Log.w(TAG, "hasError");
@@ -175,7 +143,7 @@ public class GeofenceTransitionsIntentService extends IntentService{
             List<Geofence> triggeringGeofences) {
 
         String geofenceTransitionString = getTransitionString(geofenceTransition);
-        GPS_dbManager = new DBHelper(getApplicationContext(), "GPSList.db", null, 3);
+        GPS_dbManager = DBHelper.getInstance(getApplicationContext(), "GPSList.db", null, 3);
         GPS_dbManager.insert("insert into SCAN_LIST ('_id', 'identifier', 'enter', 'lat', 'lon', 'lat', 'timestamp') values(null,'" +
                 geofence.getRequestId() + "', '" + geofenceTransitionString+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
 

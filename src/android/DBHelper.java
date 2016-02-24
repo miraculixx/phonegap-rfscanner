@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import org.apache.http.client.protocol.ClientContextConfigurer;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -17,10 +18,22 @@ import java.util.Calendar;
 public class DBHelper extends SQLiteOpenHelper {
 
     private int g_version;
+    private static DBHelper sInstance;
+    private static SQLiteDatabase mDatabase;
+
+
+    public static synchronized DBHelper getInstance(Context context, String name, SQLiteDatabase.CursorFactory factory, int version){
+        if (sInstance == null){
+            sInstance = new DBHelper(context, name, factory, version);
+        }
+        return sInstance;
+    }
 
     public DBHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
         g_version = version;
+
+
     }
 
     @Override
@@ -37,28 +50,28 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
     public void insert(String _query) {
-        SQLiteDatabase db = getWritableDatabase();
-        db.execSQL(_query);
-        db.close();
+        mDatabase = getWritableDatabase();
+        mDatabase.execSQL(_query);
+        mDatabase.close();
     }
 
     public void update(String _query) {
-        SQLiteDatabase db = getWritableDatabase();
-        db.execSQL(_query);
-        db.close();
+        mDatabase = getWritableDatabase();
+        mDatabase.execSQL(_query);
+        mDatabase.close();
     }
 
     public void delete(String _query) {
-        SQLiteDatabase db = getWritableDatabase();
-        db.execSQL(_query);
-        db.close();
+        mDatabase = getWritableDatabase();
+        mDatabase.execSQL(_query);
+        mDatabase.close();
     }
 
     public JSONArray PrintData(int v) {
-        SQLiteDatabase db = getReadableDatabase();
         JSONArray jArray = new JSONArray();
 
-        Cursor cursor = db.rawQuery("select * from SCAN_LIST", null);
+        mDatabase = getReadableDatabase();
+        Cursor cursor = mDatabase.rawQuery("select * from SCAN_LIST", null);
         while(cursor.moveToNext()) {
 
             if(v == 1) {// networks:

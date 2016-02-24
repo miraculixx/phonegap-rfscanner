@@ -32,7 +32,7 @@ public class BluetoothScanService extends Service{
     public void onCreate(){
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         CheckBlueToothState();
-        dbManager = new DBHelper(getApplicationContext(), "BTE.db", null, 1);
+        dbManager = DBHelper.getInstance(getApplicationContext(), "BTE.db", null, 1);
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

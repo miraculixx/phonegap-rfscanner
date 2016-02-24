@@ -29,7 +29,7 @@ public class WifiScanService extends Service {
     @Override
     public void onCreate(){
         mainWifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        dbManager = new DBHelper(getApplicationContext(), "WiFi.db", null, 1);
+        dbManager = DBHelper.getInstance(getApplicationContext(), "WiFi.db", null, 1);
         CheckWiFiState();
     }
 

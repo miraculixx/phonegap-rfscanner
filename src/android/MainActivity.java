@@ -52,6 +52,9 @@ public class MainActivity extends CordovaActivity
 
         context = getApplicationContext();
 
+
+
+
         // Set by <content src="index.html" /> in config.xml
         loadUrl(launchUrl);
     }
@@ -109,13 +112,13 @@ public class MainActivity extends CordovaActivity
             JSONObject jObject;
             JSONArray jArray_wifi, jArray_bte, jArray_gps;
 
-            w_dbManager = new DBHelper(context, "WiFi.db", null, 1);
+            w_dbManager = DBHelper.getInstance(context, "WiFi.db", null, 1);
             jArray_wifi = w_dbManager.PrintData(wifiDB);
 
-            b_dbManager = new DBHelper(context, "BTE.db", null, 1);
+            b_dbManager = DBHelper.getInstance(context, "BTE.db", null, 1);
             jArray_bte = b_dbManager.PrintData(bteDB);
 
-            g_dbManager = new DBHelper(context, "GPSList.db", null, 3);
+            g_dbManager = DBHelper.getInstance(context, "GPSList.db", null, 3);
             jArray_gps = g_dbManager.PrintData(gpsDB);
 
 
@@ -148,7 +151,6 @@ public class MainActivity extends CordovaActivity
             w_dbManager.delete("delete from SCAN_LIST where 1");
             b_dbManager.delete("delete from SCAN_LIST where 1");
             g_dbManager.delete("delete from SCAN_LIST where 1");
-            Toast.makeText(context, "Data Sent!", Toast.LENGTH_LONG).show();
         }
     }
 }
