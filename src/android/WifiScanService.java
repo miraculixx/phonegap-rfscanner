@@ -11,9 +11,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import java.util.List;
-/**
- * Created by Slonic on 1/27/2016.
- */
+
 public class WifiScanService extends Service {
 
     private Handler mHandler;
@@ -94,7 +92,6 @@ public class WifiScanService extends Service {
                 {
                     int level = WifiManager.calculateSignalLevel(result.level, maxLevel);
                     String SSID = result.SSID;
-                    String capabilities = result.capabilities;
                     dbManager.insert("insert into SCAN_LIST values(null,'" + SSID + "', '" + level + "');");
                 }
             }

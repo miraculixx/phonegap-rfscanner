@@ -12,9 +12,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.widget.Toast;
 
-/**
- * Created by Slonic on 1/27/2016.
- */
+
 public class BluetoothScanService extends Service{
 
     private Handler mHandler;
