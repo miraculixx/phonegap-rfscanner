@@ -29,7 +29,7 @@ public class WifiScanService extends Service {
     @Override
     public void onCreate(){
         mainWifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        dbManager = DBHelper.getInstance(getApplicationContext(), "WiFi.db", null, 1);
+        dbManager = new DBHelper(getApplicationContext(), "WiFi.db", null, 1);
         CheckWiFiState();
     }
 
@@ -92,7 +92,7 @@ public class WifiScanService extends Service {
                 {
                     int level = WifiManager.calculateSignalLevel(result.level, maxLevel);
                     String SSID = result.SSID;
-                    dbManager.insert("insert into SCAN_LIST values(null,'" + SSID + "', '" + level + "');");
+                    dbManager.insert("insert into SCAN_LIST ('_id', 'NAME', 'SIGNAL') values(null,'" + SSID + "', '" + level + "');");
                 }
             }
         }

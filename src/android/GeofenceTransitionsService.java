@@ -14,7 +14,9 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
@@ -22,10 +24,15 @@ import android.util.Log;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingEvent;
+import android.app.Service;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -35,7 +42,7 @@ import java.util.List;
  * the transition type and geofence id(s) that triggered the transition. Creates a notification
  * as the output.
  */
-public class GeofenceTransitionsIntentService extends IntentService{
+public class GeofenceTransitionsService extends Service {
 
     protected static final String TAG = "GeofenceTransitionsIS";
     private double lat, lon, alt;
@@ -43,23 +50,13 @@ public class GeofenceTransitionsIntentService extends IntentService{
 
     public DBHelper GPS_dbManager;
     public Geofence geofence;
-    Location mLastLocation;
+    Intent intent;
     LocationManager locationManager = null;
     public GetLocationInfo listener;
 
     private static final int LOCATION_INTERVAL = 10000;
     private static final float LOCATION_DISTANCE = 10f;
 
-
-
-    /**
-     * This constructor is required, and calls the super IntentService(String)
-     * constructor with the name for a worker thread.
-     */
-    public GeofenceTransitionsIntentService() {
-        // Use the TAG to name the worker thread.
-        super(TAG);
-    }
 
     private class GetLocationInfo implements LocationListener{
         @Override
@@ -89,18 +86,18 @@ public class GeofenceTransitionsIntentService extends IntentService{
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOCATION_INTERVAL, LOCATION_DISTANCE, listener);
 
     }
-    /**
-     * Handles incoming intents.
-     * @param intent sent by Location Services. This Intent is provided to Location
-     *               Services (inside a PendingIntent) when addGeofences() is called.
-     */
+
+
     @Override
-    protected void onHandleIntent(Intent intent) {
+    public void onCreate(){ super.onCreate(); intent = new Intent(TAG); }
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         initializeLocationManager();
+
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
             Log.w(TAG, "hasError");
-            return;
+            return START_STICKY;
         }
 
         // Get the transition type.
@@ -127,6 +124,18 @@ public class GeofenceTransitionsIntentService extends IntentService{
             // Log the error.
             Log.e(TAG, getString(R.string.geofence_transition_invalid_type, geofenceTransition));
         }
+
+        return START_STICKY;
+    }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        locationManager.removeUpdates(listener);
+    }
+    @Override
+    public IBinder onBind(Intent intent)
+    {
+        return null;
     }
 
     /**
@@ -143,11 +152,10 @@ public class GeofenceTransitionsIntentService extends IntentService{
             List<Geofence> triggeringGeofences) {
 
         String geofenceTransitionString = getTransitionString(geofenceTransition);
-        GPS_dbManager = DBHelper.getInstance(getApplicationContext(), "GPSList.db", null, 3);
-        GPS_dbManager.insert("insert into SCAN_LIST ('_id', 'identifier', 'enter', 'lat', 'lon', 'lat', 'timestamp') values(null,'" +
-                geofence.getRequestId() + "', '" + geofenceTransitionString+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
 
-        // Get the Ids of each geofence that was triggered.
+        new DB_insert().execute("insert into SCAN_LIST ('_id', 'identifier', 'enter', 'lat', 'lon', 'lat', 'timestamp') values(null,'" +
+                geofence.getRequestId() + "', '" + geofenceTransitionString+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
+         // Get the Ids of each geofence that was triggered.
         ArrayList triggeringGeofencesIdsList = new ArrayList();
         for (Geofence geofence : triggeringGeofences) {
             triggeringGeofencesIdsList.add(geofence.getRequestId());
@@ -221,4 +229,12 @@ public class GeofenceTransitionsIntentService extends IntentService{
         }
     }
 
+    private class DB_insert extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... insertSQL) {
+            GPS_dbManager = new DBHelper(getApplicationContext(), "GPSList.db", null, 3);
+            GPS_dbManager.insert(insertSQL[0]);
+            return "";
+        }
+    }
 }

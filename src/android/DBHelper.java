@@ -18,60 +18,49 @@ import java.util.Calendar;
 public class DBHelper extends SQLiteOpenHelper {
 
     private int g_version;
-    private static DBHelper sInstance;
-    private static SQLiteDatabase mDatabase;
 
-
-    public static synchronized DBHelper getInstance(Context context, String name, SQLiteDatabase.CursorFactory factory, int version){
-        if (sInstance == null){
-            sInstance = new DBHelper(context, name, factory, version);
-        }
-        return sInstance;
-    }
 
     public DBHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
         g_version = version;
-
-
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
         Log.w("Version", "SQL = " + g_version);
         if (g_version == 3)
-            db.execSQL("CREATE TABLE SCAN_LIST( _id INTEGER PRIMARY KEY AUTOINCREMENT, identifier TEXT, enter TEXT, lat TEXT, lon TEXT, alt TEXT, timestamp TEXT);");
+            db.execSQL("CREATE TABLE SCAN_LIST ( _id INTEGER PRIMARY KEY AUTOINCREMENT, identifier TEXT, enter TEXT, lat TEXT, lon TEXT, alt TEXT, timestamp TEXT);");
         else
-            db.execSQL("CREATE TABLE SCAN_LIST( _id INTEGER PRIMARY KEY AUTOINCREMENT, NAME TEXT, SIGNAL INTEGER);");
+            db.execSQL("CREATE TABLE SCAN_LIST ( _id INTEGER PRIMARY KEY AUTOINCREMENT, NAME TEXT, SIGNAL INTEGER);");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
     }
 
-    public void insert(String _query) {
-        mDatabase = getWritableDatabase();
-        mDatabase.execSQL(_query);
-        mDatabase.close();
+    public void  insert(String _query) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.execSQL(_query);
+        db.close();
     }
 
     public void update(String _query) {
-        mDatabase = getWritableDatabase();
-        mDatabase.execSQL(_query);
-        mDatabase.close();
+        SQLiteDatabase db = getWritableDatabase();
+        db.execSQL(_query);
+        db.close();
     }
 
     public void delete(String _query) {
-        mDatabase = getWritableDatabase();
-        mDatabase.execSQL(_query);
-        mDatabase.close();
+        SQLiteDatabase db = getWritableDatabase();
+        db.execSQL(_query);
+        db.close();
     }
 
     public JSONArray PrintData(int v) {
         JSONArray jArray = new JSONArray();
 
-        mDatabase = getReadableDatabase();
-        Cursor cursor = mDatabase.rawQuery("select * from SCAN_LIST", null);
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery("select * from SCAN_LIST", null);
         while(cursor.moveToNext()) {
 
             if(v == 1) {// networks:
@@ -129,6 +118,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 }
             }
         }
+        cursor.close();
+        db.close();
         return jArray;
     }
 }

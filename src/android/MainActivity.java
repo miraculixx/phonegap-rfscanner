@@ -112,13 +112,13 @@ public class MainActivity extends CordovaActivity
             JSONObject jObject;
             JSONArray jArray_wifi, jArray_bte, jArray_gps;
 
-            w_dbManager = DBHelper.getInstance(context, "WiFi.db", null, 1);
+            w_dbManager = new DBHelper(context, "WiFi.db", null, 1);
             jArray_wifi = w_dbManager.PrintData(wifiDB);
 
-            b_dbManager = DBHelper.getInstance(context, "BTE.db", null, 1);
+            b_dbManager = new DBHelper(context, "BTE.db", null, 1);
             jArray_bte = b_dbManager.PrintData(bteDB);
 
-            g_dbManager = DBHelper.getInstance(context, "GPSList.db", null, 3);
+            g_dbManager = new DBHelper(context, "GPSList.db", null, 3);
             jArray_gps = g_dbManager.PrintData(gpsDB);
 
 

@@ -32,7 +32,7 @@ public class BluetoothScanService extends Service{
     public void onCreate(){
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         CheckBlueToothState();
-        dbManager = DBHelper.getInstance(getApplicationContext(), "BTE.db", null, 1);
+        dbManager = new DBHelper(getApplicationContext(), "BTE.db", null, 1);
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -74,7 +74,7 @@ public class BluetoothScanService extends Service{
             if(BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 int  rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
-                dbManager.insert("insert into SCAN_LIST values(null,'" + device + "', '" + rssi + "');");
+                dbManager.insert("insert into SCAN_LIST ('_id', 'NAME', 'SIGNAL') values(null,'" + device + "', '" + rssi + "');");
             }
         }
     };
