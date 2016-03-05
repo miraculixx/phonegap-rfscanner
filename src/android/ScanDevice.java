@@ -50,7 +50,7 @@ public class ScanDevice extends CordovaPlugin {
     // Tmp config settings for the notification
     private static JSONObject updateSettings;
     private String interval="1000";
-    private String serverurl;
+    private String serverurl, regionArray;
     private Boolean stopped = true;
     private MainActivity mainActivity;
     private final long m_TimerInterval = 14 * 60000;
@@ -59,7 +59,7 @@ public class ScanDevice extends CordovaPlugin {
 
     Activity context;
     // Used to (un)bind the service to with the activity
-    private final ServiceConnection connection = new ServiceConnection() {
+    private final ServiceConnection wifi_connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
             // Nothing to do here
@@ -69,7 +69,17 @@ public class ScanDevice extends CordovaPlugin {
             // Nothing to do here
         }
     };
-    private final ServiceConnection connection2 = new ServiceConnection() {
+    private final ServiceConnection bte_connection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder binder) {
+            // Nothing to do here
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // Nothing to do here
+        }
+    };
+    private final ServiceConnection gps_connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
             // Nothing to do here
@@ -112,8 +122,9 @@ public class ScanDevice extends CordovaPlugin {
         }
 
         if (action.equalsIgnoreCase("start")) {
-            interval= args.getString(0);
+            regionArray = args.getString(0);
             serverurl = args.getString(1);
+            interval= args.getString(2);
             stopped = false;
             mainActivity = new MainActivity();
             startrun();
@@ -256,13 +267,20 @@ public class ScanDevice extends CordovaPlugin {
         Intent bluetooth = new Intent(context,BluetoothScanService.class);
         bluetooth.putExtra(BluetoothScanService.TIME_STAMP,interval);
 
+        Intent gps = new Intent(context,MultiRegionService.class);
+        gps.putExtra(MultiRegionService.COORD, regionArray);
+        gps.putExtra(MultiRegionService.TIME_STAMP, interval);
+
         try {
 
-            context.bindService(wifiIntent, connection, Context.BIND_AUTO_CREATE);
+            context.bindService(wifiIntent, wifi_connection, Context.BIND_AUTO_CREATE);
             context.startService(wifiIntent);
 
-            context.bindService(bluetooth, connection2, Context.BIND_AUTO_CREATE);
+            context.bindService(bluetooth, bte_connection, Context.BIND_AUTO_CREATE);
             context.startService(bluetooth);
+
+            context.bindService(gps, gps_connection, Context.BIND_AUTO_CREATE);
+            context.startService(gps);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -281,13 +299,17 @@ public class ScanDevice extends CordovaPlugin {
                 context, WifiScanService.class);
         Intent bluetooth = new Intent(
                 context, BluetoothScanService.class);
+        Intent gps = new Intent(
+                context, MultiRegionService.class);
 
         if (!isBind)
             return;
-        context.unbindService(connection);
+        context.unbindService(wifi_connection);
         context.stopService(wifiIntent);
-        context.unbindService(connection2);
+        context.unbindService(bte_connection);
         context.stopService(bluetooth);
+        context.unbindService(gps_connection);
+        context.stopService(gps);
         isBind = false;
     }
 

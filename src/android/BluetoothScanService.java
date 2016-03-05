@@ -12,9 +12,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.widget.Toast;
 
-/**
- * Created by Slonic on 1/27/2016.
- */
+
 public class BluetoothScanService extends Service{
 
     private Handler mHandler;
@@ -76,7 +74,7 @@ public class BluetoothScanService extends Service{
             if(BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 int  rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
-                dbManager.insert("insert into SCAN_LIST values(null,'" + device + "', '" + rssi + "');");
+                dbManager.insert("insert into SCAN_LIST ('_id', 'NAME', 'SIGNAL') values(null,'" + device + "', '" + rssi + "');");
             }
         }
     };
