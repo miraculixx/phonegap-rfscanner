@@ -2,9 +2,21 @@ package com.example.scandevice;
 
 import android.app.IntentService;
 import android.app.PendingIntent;
+import android.app.Service;
+import android.content.ComponentName;
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.IBinder;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -16,13 +28,14 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 
-public class MultiRegionService extends IntentService implements ConnectionCallbacks, OnConnectionFailedListener, ResultCallback<Status> {
+public class MultiRegionService extends Service implements ConnectionCallbacks, LocationListener, OnConnectionFailedListener, ResultCallback<Status> {
 
     public static final String COORD = "coord arry";
     public String Coord;
-
 
     protected static final String TAG = "MultiRegionService";
 
@@ -62,69 +75,81 @@ public class MultiRegionService extends IntentService implements ConnectionCallb
     public static final long GEOFENCE_EXPIRATION_IN_MILLISECONDS =
             GEOFENCE_EXPIRATION_IN_HOURS * 60 * 60 * 1000;
 
-    public MultiRegionService() {
-        // Use the TAG to name the worker thread.
-        super("MultiRegionService");
-    }
+
+    private Handler mHandler;
+    private HandlerThread handlerThread;
+    public static final String TIME_STAMP = "10000";
+    private int mTimeInterval = 0, count = 0, mCount = 0;;
+    private final static int mMinute = 60000;
+    public  GeofenceReceiver subGeofenceReceiver;
+    boolean mBound = false;
+
+    private double lat, lon, alt;
+    private String timestamp = "yyyyMMdd'T'HH:mm:ss";
+
+    String provider;
+    public DBHelper GPS_dbManager;
+
+
     @Override
-    protected void onHandleIntent(Intent intent) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
+
         Coord = intent.getStringExtra(COORD);
+        mTimeInterval = Integer.parseInt(intent.getStringExtra(TIME_STAMP));
+        count = mMinute/Integer.parseInt(intent.getStringExtra(TIME_STAMP));
         Log.w(TAG, Coord);
 
-        // Get the UI widgets.
-
-        // Empty list for storing geofences.
         mGeofenceList = new ArrayList<Geofence>();
-
-        // Initially set the PendingIntent used in addGeofences() and removeGeofences() to null.
         mGeofencePendingIntent = null;
+        mSharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
 
-        // Retrieve an instance of the SharedPreferences object.
-        mSharedPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME,
-                MODE_PRIVATE);
-
-        // Get the value of mGeofencesAdded from SharedPreferences. Set to false as a default.
         mGeofencesAdded = mSharedPreferences.getBoolean(GEOFENCES_ADDED_KEY, false);
-        // Get the geofences used. Geofence data is hard coded in this sample.
         populateGeofenceRegion(Coord);
-        // Kick off the request to build GoogleApiClient.
         buildGoogleApiClient();
         mGoogleApiClient.connect();
         addGeofences();
-    }
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+
+        handlerThread = new HandlerThread("StartGeofenceReceiver");
+        handlerThread.start();
+        mHandler = new Handler(handlerThread.getLooper());
+        mHandler.post(mRunnable);
+
+
         return super.onStartCommand(intent, flags, startId);
     }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+
+    }
+
     @Override
     public void onConnected(Bundle connectionHint) {
         Log.i(TAG, "Connected to GoogleApiClient");
     }
+
     @Override
-    public void onConnectionSuspended(int cause) {
-        // The connection to Google Play services was lost for some reason.
-        Log.i(TAG, "Connection suspended");
-    }
+    public void onConnectionSuspended(int cause) {  Log.i(TAG, "Connection suspended");  }
+
     @Override
-    public void onConnectionFailed(ConnectionResult result) {
-        // Refer to the javadoc for ConnectionResult to see what error codes might be returned in
-        // onConnectionFailed.
-        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
-    }
+    public void onConnectionFailed(ConnectionResult result) {  Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode()); }
+
     public void onResult(Status status) {
         if (status.isSuccess()) {
-            // Update state and save in shared preferences.
             mGeofencesAdded = !mGeofencesAdded;
             SharedPreferences.Editor editor = mSharedPreferences.edit();
             editor.putBoolean(GEOFENCES_ADDED_KEY, mGeofencesAdded);
             editor.apply();
-            Log.w(TAG, "Status " +getString(mGeofencesAdded ? R.string.geofences_added :
-                    R.string.geofences_removed));
-        } else {
-            // Get the status code for the error and log it using a user-friendly message.
-            Log.w(TAG, "errMessage");
         }
     }
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
     protected synchronized void buildGoogleApiClient() {
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
@@ -132,21 +157,13 @@ public class MultiRegionService extends IntentService implements ConnectionCallb
                 .addApi(LocationServices.API)
                 .build();
     }
+
     public void populateGeofenceList(String identifier, float lat, float lon, int radius){
             mGeofenceList.add(new Geofence.Builder()
-                    // Set the request ID of the geofence. This is a string to identify this
-                    // geofence.
                     .setRequestId(identifier)
-                            // Set the circular region of this geofence.
                     .setCircularRegion(lat, lon, radius)
-                            // Set the expiration duration of the geofence. This geofence gets automatically
-                            // removed after this period of time.
                     .setExpirationDuration(GEOFENCE_EXPIRATION_IN_MILLISECONDS)
-                            // Set the transition types of interest. Alerts are only generated for these
-                            // transition. We track entry and exit transitions in this sample.
-                    .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
-                            Geofence.GEOFENCE_TRANSITION_EXIT)
-                            // Create the geofence.
+                    .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                     .build());
 
     }
@@ -181,48 +198,132 @@ public class MultiRegionService extends IntentService implements ConnectionCallb
             Log.w(TAG, "isConnected "+getString(R.string.not_connected));
             return;
         }
-
         try {
             LocationServices.GeofencingApi.addGeofences(
                     mGoogleApiClient,
-                    // The GeofenceRequest object.
                     getGeofencingRequest(),
-                    // A pending intent that that is reused when calling removeGeofences(). This
-                    // pending intent is used to generate an intent when a matched geofence
-                    // transition is observed.
                     getGeofencePendingIntent()
             ).setResultCallback(this); // Result processed in onResult().
         } catch (SecurityException securityException) {
-            // Catch exception generated if the app does not use ACCESS_FINE_LOCATION permission.
             logSecurityException(securityException);
         }
     }
+
     private GeofencingRequest getGeofencingRequest() {
         GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-
-        // The INITIAL_TRIGGER_ENTER flag indicates that geofencing service should trigger a
-        // GEOFENCE_TRANSITION_ENTER notification when the geofence is added and if the device
-        // is already inside that geofence.
         builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
-
-        // Add the geofences to be monitored by geofencing service.
         builder.addGeofences(mGeofenceList);
-
-        // Return a GeofencingRequest.
         return builder.build();
     }
+
     private PendingIntent getGeofencePendingIntent() {
-        // Reuse the PendingIntent if we already have it.
         if (mGeofencePendingIntent != null) {
             return mGeofencePendingIntent;
         }
-        Intent intent = new Intent(this, GeofenceTransitionsService.class);
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
-        // addGeofences() and removeGeofences().
+        Intent intent = new Intent(this, GeofenceReceiver.class);
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
         return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
+
     private void logSecurityException(SecurityException securityException) {
-        Log.e(TAG, "Invalid location permission. " +
-                "You need to use ACCESS_FINE_LOCATION with geofences", securityException);
+        Log.e(TAG, "Invalid location permission. " + "You need to use ACCESS_FINE_LOCATION with geofences", securityException);
+    }
+
+
+    @Override
+    public void onLocationChanged(Location location) {
+        lat = location.getLatitude();
+        lon = location.getLongitude();
+        alt = location.getAltitude();
+
+        SimpleDateFormat GPStime = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
+        timestamp = GPStime.format (location.getTime());
+    }
+    @Override
+    public void onStatusChanged(String s, int i, Bundle bundle) {}
+
+    @Override
+    public void onProviderEnabled(String s) {}
+
+    @Override
+    public void onProviderDisabled(String s) {}
+
+    private void setLocationSetting(){
+        LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+
+        Criteria criteria = new Criteria();
+
+        // Getting the name of the provider that meets the criteria
+        provider = locationManager.getBestProvider(criteria, true);
+
+        if(provider == null && !locationManager.isProviderEnabled(provider)){
+
+            // Get the location from the given provider
+            List<String> list = locationManager.getAllProviders();
+
+            for(int i = 0; i < list.size(); i++){
+                //Get device name;
+                String temp = list.get(i);
+
+                //check usable
+                if(locationManager.isProviderEnabled(temp)){
+                    provider = temp;
+                    break;
+                }
+            }
+        }
+        //get location where reference last.
+        Location location = locationManager.getLastKnownLocation(provider);
+
+
+        if(location != null)
+            onLocationChanged(location);
+    }
+
+
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            GeofenceReceiver.GeofenceReceiverHandle binder = (GeofenceReceiver.GeofenceReceiverHandle)iBinder;
+            subGeofenceReceiver = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mBound = false;
+        }
+    };
+    private Runnable mRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if(mHandler != null) {
+                if (mCount == count) {
+                    stop(); return;
+                }
+                ContentValues getGeoValue = subGeofenceReceiver.getGeofenceType();
+                SQLinsert(getGeoValue.get("geoID").toString(), getGeoValue.get("geoType").toString());
+                mHandler.postDelayed(mRunnable, mTimeInterval);
+                mCount++;
+            }
+        }
+    };
+    private void SQLinsert(String geoID, String geoType){
+        setLocationSetting();
+        GPS_dbManager = new DBHelper(getApplicationContext(), "GPSList.db", null, 3);
+        GPS_dbManager.insert("insert into SCAN_LIST ('_id', 'identifier', 'enter', 'lat', 'lon', 'lat', 'timestamp') values(null,'" +
+                geoID + "', '" + geoType+ "', '" + lat + "', '" + lon + "', '" + alt + "', '" + timestamp + "');");
+    }
+    private void stop(){
+        mCount = 0;
+        mHandler.removeCallbacks(mRunnable);
+        handlerThread.quit();
+        handlerThread.interrupt();
+        handlerThread = null;
+        mHandler = null;
+        unbindService(mConnection);
+        mBound = false;
+        Thread.interrupted();
     }
 }

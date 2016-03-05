@@ -29,9 +29,9 @@ public class DBHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.w("Version", "SQL = " + g_version);
         if (g_version == 3)
-            db.execSQL("CREATE TABLE SCAN_LIST ( _id INTEGER PRIMARY KEY AUTOINCREMENT, identifier TEXT, enter TEXT, lat TEXT, lon TEXT, alt TEXT, timestamp TEXT);");
+            db.execSQL("CREATE TABLE SCAN_LIST( _id INTEGER PRIMARY KEY AUTOINCREMENT, identifier TEXT, enter TEXT, lat TEXT, lon TEXT, alt TEXT, timestamp TEXT);");
         else
-            db.execSQL("CREATE TABLE SCAN_LIST ( _id INTEGER PRIMARY KEY AUTOINCREMENT, NAME TEXT, SIGNAL INTEGER);");
+            db.execSQL("CREATE TABLE SCAN_LIST( _id INTEGER PRIMARY KEY AUTOINCREMENT, NAME TEXT, SIGNAL INTEGER);");
     }
 
     @Override

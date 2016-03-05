@@ -269,6 +269,7 @@ public class ScanDevice extends CordovaPlugin {
 
         Intent gps = new Intent(context,MultiRegionService.class);
         gps.putExtra(MultiRegionService.COORD, regionArray);
+        gps.putExtra(MultiRegionService.TIME_STAMP, interval);
 
         try {
 
